@@ -82,6 +82,8 @@ let a = [1, 2, 3, 4, 5];
 
 #### 	函数
 
+使用 `return` 关键字和指定值，可从函数中提前返回；但大部分函数隐式的返回最后的表达式。这是一个有返回值的函数的例子
+
 ```rust
 fn plus_one(x: i32) -> i32 {	//参数要指定类型，返回值类型用箭头指定
     let y = 2;	//语句，没有值
@@ -156,6 +158,146 @@ fn main() {
     }
 }
 ```
+
+### Chap4.
+
+​	对于存储方式跟堆有关的变量，在它对应的大括号结束时，会调用`drop`函数（相当于c++中的析构函数）。
+
+​	**注意，在rust中，字符串有两种类型。
+
+```rust
+let mut s = "string";	//这里s是一个字符串引用，虽然有mut但是不能从中改变“string”的值，mut的作用是可以改变s的指向 比如：
+s.push_str("xxx");		//报错
+s = "hello";			//可以
+
+let mut s = String::from("hello");	//这里s就是一个字符串
+```
+
+
+
+#### 	移动：
+
+​		对于string类型的变量，其`ptr len capacity`都在栈中存储。`ptr`指向的字符数组在堆中存储
+
+​		并且在复制的时候，直接将被复制的那个变量无效化（移动）
+
+```rust
+let s1 = String::from("hello");
+let s2 = s1;
+
+println!("{}, world!", s1);	//报错	
+```
+
+​	移动也可以发生在函数的参数传递以及返回值里，如：
+
+```rust
+fn main() {
+    let s1 = String::from("hello");
+
+    let (s2, len) = calculate_length(s1);
+
+    println!("The length of '{}' is {}.", s2, len);
+}
+
+fn calculate_length(s: String) -> (String, usize) {
+    let length = s.len(); // len() 返回字符串的长度
+
+    (s, length)
+}
+```
+
+​		这种写法过于繁杂，所以rust中可以使用”引用“
+
+
+
+#### 	克隆：
+
+​		如果需要确确实实地复制的话，应该使用`clone`函数。
+
+```rust
+let s1 = String::from("hello");
+let s2 = s1.clone();
+
+println!("s1 = {}, s2 = {}", s1, s2);
+```
+
+
+
+#### 	对于只在栈上的数据而言，直接拷贝
+
+
+
+#### 	引用:	
+
+​	对于一个变量，要么只能有一个可变引用，要么只能有数个不可变引用。
+
+```rust
+
+	//普通引用的作用及传参形式
+	fn main() {
+        let s1 = String::from("hello");
+
+        let len = calculate_length(&s1);
+
+        println!("The length of '{}' is {}.", s1, len);
+    }
+
+    fn calculate_length(s: &String) -> usize {
+        s.len()
+    }
+	
+	//mut引用的作用 及传参形式
+	fn main() {
+	    let mut s = String::from("hello");
+
+    	change(&mut s);
+	}
+
+	fn change(some_string: &mut String) {
+    	some_string.push_str(", world");
+	}
+
+	//mut引用和普通引用的区别 注意看下面mut的位置
+	fn main(){
+        let mut b = String::from("world");
+        let mut b2 = String::from("here");
+        let b1 = &mut b;
+    	b1.push_str("hello");	//可以编译通过
+        b1 = &mut b2;			//编译不通过
+        
+	}
+
+	fn main(){
+        let mut b = String::from("world");
+    	let mut b2 = String::from("here");
+    	let mut b1 = &b;
+    	b1.push_str("hello");	//编译不通过
+    	b1 = & mut b2;			//编译通过
+	}
+```
+
+
+
+#### 	slice
+
+```rust
+let s = String::from("hello world")
+let slice = &s[0..2];
+let slice = &s[..2];
+let world = &s[6..];
+```
+
+
+
+<img src="https://kaisery.github.io/trpl-zh-cn/img/trpl04-06.svg" alt="world containing a pointer to the 6th byte of String s and a length 5" style="zoom: 25%;" />
+
+
+
+
+
+
+
+
 
 
 
