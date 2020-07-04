@@ -396,5 +396,161 @@ fn value_in_cents(coin: Coin) -> u8 {
 }
 ```
 
+#### 包含了枚举的枚举
 
+```rust
+#[derive(Debug)] // 这样可以可以立刻看到州的名称
+enum UsState {
+    Alabama,
+    Alaska,
+    // --snip--
+}
+
+enum Coin {
+    Penny,
+    Nickel,
+    Dime,
+    Quarter(UsState),
+}
+
+fn value_in_cents(coin: Coin) -> u8 {
+    match coin {
+        Coin::Penny => 1,
+        Coin::Nickel => 5,
+        Coin::Dime => 10,
+        Coin::Quarter(state) => {
+            println!("State quarter from {:?}!", state);
+            25
+        },
+    }
+}
+```
+
+
+
+### Chap7. 包 crate 模块
+
+​	包   ----(包含)----->  一个**库crate** | 多个**二进制crate** 
+
+   包至少包含一个crate
+
+   每个crate都有一个根。
+
+  一个包有一个Cargo.toml
+
+####    模块
+
+​		**模块** 让我们可以将一个**crate** 中的代码进行分组。
+
+​		如果在一个库（restaurant）的restaurant/src/lib.rs 中定义了下面一段代码
+
+```rust
+    mod front_of_house {
+        mod hosting {
+            fn add_to_waitlist() {}
+
+            fn seat_at_table() {}
+        }
+
+        mod serving {
+            fn take_order() {}
+
+            fn server_order() {}
+
+            fn take_payment() {}
+        }
+    }
+```
+
+在前面我们提到了，`src/main.rs` 和 `src/lib.rs` 叫做 crate 根。之所以这样叫它们是因为这两个文件的内容都分别在 crate 模块结构的根组成了一个名为 `crate` 的模块，该结构被称为 *模块树*（*module tree*）。上述代码的模块树如下：
+
+示例 7-2 展示了示例 7-1 中的模块树的结构。
+
+```text
+crate
+ └── front_of_house
+     ├── hosting
+     │   ├── add_to_waitlist
+     │   └── seat_at_table
+     └── serving
+         ├── take_order
+         ├── serve_order
+         └── take_payment
+```
+
+#### 模块的私有与公有：
+
+```rust
+    mod front_of_house {
+        pub mod hosting {
+            pub fn add_to_waitlist() {}
+        }
+    }
+
+    pub fn eat_at_restaurant() {
+        // Absolute path
+        crate::front_of_house::hosting::add_to_waitlist();
+
+        // Relative path
+        front_of_house::hosting::add_to_waitlist();
+    }
+```
+
+要在`eat_at_restaurant()`中访问add_to_waitlist()必须要将其路径上的所有东西都设置成`pub`的（枚举成员默认是私有的）。在上面一段代码中显然front_of_house不是pub的，这是因为eat_at_restaurant()跟front_of_house在同一个create里（他们是兄弟节点）
+
+#### super
+
+​	super相当于文件路径中的`..`即访问父节点
+
+#### 公有的结构体
+
+```rust
+mod back_of_house {
+    pub struct Breakfast {
+        pub toast: String,
+        seasonal_fruit: String,
+    }
+
+    impl Breakfast {
+        pub fn summer(toast: &str) -> Breakfast {
+            Breakfast {
+                toast: String::from(toast),
+                seasonal_fruit: String::from("peaches"),
+            }
+        }
+    }
+}
+
+pub fn eat_at_restaurant() {
+    // Order a breakfast in the summer with Rye toast
+    let mut meal = back_of_house::Breakfast::summer("Rye");
+    // Change our mind about what bread we'd like
+    meal.toast = String::from("Wheat");
+    println!("I'd like {} toast please", meal.toast);
+
+    // The next line won't compile if we uncomment it; we're not allowed
+    // to see or modify the seasonal fruit that comes with the meal
+    // meal.seasonal_fruit = String::from("blueberries");
+}
+```
+
+#### use
+
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+use crate::front_of_house::hosting;//这里一般引用到函数的父模块，而不是函数
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+
+`use xxx as xxx`跟python中的`import xxx as xxx`是一样的
 
