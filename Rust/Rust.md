@@ -297,16 +297,104 @@ let world = &s[6..];
 
 
 
+### Chap5. 结构体
+
+```rust
+//***********普通结构体***************************
+#[derive(Debug)]
+struct Rectangle {	//定义语法
+    width: u32,
+    height: u32,
+}
+
+impl Rectangle {	//函数定义语法
+    fn area(&self) -> u32 {
+        self.width * self.height
+    }
+}
+
+fn main() {
+    let rect1 = Rectangle { width: 30, height: 50 };
+			//赋值语法
+    println!(
+        "The area of the rectangle is {} square pixels.",
+        rect1.area()
+    );
+}
+
+//******************元组结构体*************************
+//每个
+struct Color(i32, i32, i32);
+
+let black = Color(0, 0, 0)
+```
+
+#### 	方法
+
+当使用 `object.something()` 调用**方法**时，Rust 会自动为 `object` 添加 `&`、`&mut` 或 `*` 以便使 `object` 与方法签名匹配。也就是说，这些代码是等价的：
+
+#### 	函数
+
+​		函数定义的时候**不**以self为第一个参数。
+
+​		调用的时候应该用`::`这个符号 如：
+
+```rust
+impl Rectangle {
+    fn square(size: u32) -> Rectangle {
+        Rectangle { width: size, height: size }
+    }
+}
+
+fn main(){
+    let sq = Rectangle::square(16);
+}
+```
 
 
 
+### Chap6. 枚举和模式匹配
+
+```rust
+//***********最简单的枚举*************
+enum IpAddrKind {
+    V4,
+    V6,
+}
+
+let four = IpAddrKind::V4;
+let six = IpAddrKind::V6;
+
+//************为枚举加上类型****************
+enum IpAddr {
+    V4(String),
+    V6(String),
+}
+
+let home = IpAddr::V4(String::from("127.0.0.1"));
+
+let loopback = IpAddr::V6(String::from("::1"));
+```
+
+跟结构体的语法相同，枚举也可以用`impl`关键字来定义自己的函数
+
+​	 
+
+####   match
+
+```rust
+fn value_in_cents(coin: Coin) -> u8 {
+    match coin {
+        Coin::Penny => {
+            println!("Lucky penny!");
+            1
+        },
+        Coin::Nickel => 5,
+        Coin::Dime => 10,
+        Coin::Quarter => 25,
+    }
+}
+```
 
 
 
-## Rust by Example
-
-### 	Chap1.
-
-​			
-
-​	

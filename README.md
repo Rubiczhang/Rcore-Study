@@ -16,4 +16,6 @@
 
     `git push origin master`
 
-    
+ 2. 继续学习了《rust程序设计》
+
+    明白了mut的各种用法
