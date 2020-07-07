@@ -282,7 +282,7 @@ println!("s1 = {}, s2 = {}", s1, s2);
 
 ```rust
 let s = String::from("hello world")
-let slice = &s[0..2];
+let slice = &s[0..2];//（左闭右开
 let slice = &s[..2];
 let world = &s[6..];
 ```
@@ -426,6 +426,17 @@ fn value_in_cents(coin: Coin) -> u8 {
 }
 ```
 
+####  Option:
+
+​	`option`也是一种枚举，定义在标准库中，定义如下：
+
+```rust
+enum Option<T>{
+    Some(T),
+    None,
+}
+```
+
 
 
 ### Chap7. 包 crate 模块
@@ -553,4 +564,204 @@ pub fn eat_at_restaurant() {
 ```
 
 `use xxx as xxx`跟python中的`import xxx as xxx`是一样的
+
+`pub use`
+
+
+
+在用**外部包**中定义的代码时，应该在`Cargo.toml`文件中加入**包**名，并且在源文件中`use`声明相应的函数/模块
+
+
+
+#### 嵌套路径
+
+```rust
+use std::cmp::Ordering;
+use std::io;
+
+use std::{cmp::Ordering, io};	//这一行相当于上面两行
+
+use std::io;
+use std::io::Write;
+
+use std::io::{self, Write};		//这一行相当于上面两行
+```
+
+
+
+### Chap.8 常见集合
+
+####  Vector
+
+```rust
+let v: Vec<i32> = Vec::new();	//初始化语法1
+let v = vec![1,2,3];	//初始化语法2
+v.push(5); 				
+let third: &i32 = &v[2];	//v[2]返回的是值，&v[2]返回的是引用
+match v.get(2) {			//返回一个Option<&T>
+    Some(third) => println!("The third element is {}", third),
+    None => println!("There is no third element."),
+}
+```
+
+不能在对`vector`中的某项进行引用时对vector整体进行操作，如：
+
+```rust
+let mut v = vec![1, 2, 3, 4, 5];
+
+let first = &v[0];
+
+v.push(6);
+
+println!("The first element is: {}", first);
+```
+
+#### 遍历vector中的元素
+
+```rust
+let v = vec![100, 32, 57];
+for i in &v {
+    println!("{}", i);
+}
+
+let mut v = vec![100, 32, 57];
+for i in &mut v {
+    *i += 50;		//解引用
+}
+```
+
+
+
+#### 字符串
+
+```rust
+let mut s = String::new();
+let data = "inital contents"
+let s = data.to_string();//实现了Display trait的类型都实现了这个方法
+let s = String::from("inital contents");
+
+//字符串的拼接
+let s1 = String::from("Hello, ");
+let s2 = String::from("world!");
+let s3 = s1 + &s2; // 注意 s1 被移动了，不能继续使用
+
+let mut s1 = String::from("foo");
+let s2 = "bar";
+s1.push_str(s2);  //把字符串添加进去
+
+println!("s2 is {}", s2);//报错
+
+let mut s = String::from("lo");
+s.push('l');	//把字符添加进去
+```
+
+#### hash map
+
+​	使用的时候要添加`use std::collections::hashMap`
+
+​	hash map 是**同质**的
+
+```rust
+use std::collections::HashMap;
+
+let teams  = vec![String::from("Blue"), String::from("Yellow")];
+let initial_scores = vec![10, 50];
+
+let scores: HashMap<_, _> = teams.iter().zip(initial_scores.iter()).collect(); //用数组构建hash map
+
+let field_name = String::from("Favorite color");
+let field_value = String::from("Blue");
+
+let mut map = HashMap::new();
+map.insert(field_name, field_value);	//向表中添加元素，这里参数是借用
+// 这里 field_name 和 field_value 不再有效，
+```
+
+
+
+#### 访问hash map里面的值
+
+```rust
+use std::collections::HashMap;
+
+let mut scores = HashMap::new();
+
+scores.insert(String::from("Blue"), 10);
+scores.insert(String::from("Yellow"), 50);
+
+let team_name = String::from("Blue");
+let score = scores.get(&team_name);
+```
+
+### Chap9. 泛型 trait   生命周期
+
+#### 结构体定义中的泛型
+
+```rust
+//单泛型结构体定义及使用
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+fn main() {
+    let integer = Point { x: 5, y: 10 };
+    let float = Point { x: 1.0, y: 4.0 };
+}
+//泛型相关的方法定义
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+
+//双泛型结构体定义及使用
+struct Point<T, U> {
+    x: T,
+    y: U,
+}
+
+
+fn main() {
+    let both_integer = Point { x: 5, y: 10 };
+    let both_float = Point { x: 1.0, y: 4.0 };
+    let integer_and_float = Point { x: 5, y: 4.0 };
+}
+```
+
+#### trait
+
+```rust
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+
+pub struct NewsArticle {
+    pub headline: String,
+    pub location: String,
+    pub author: String,
+    pub content: String,
+}
+
+impl Summary for NewsArticle {
+    fn summarize(&self) -> String {
+        format!("{}, by {} ({})", self.headline, self.author, self.location)
+    }
+}
+
+pub struct Tweet {
+    pub username: String,
+    pub content: String,
+    pub reply: bool,
+    pub retweet: bool,
+}
+
+impl Summary for Tweet {
+    fn summarize(&self) -> String {
+        format!("{}: {}", self.username, self.content)
+    }
+}
+```
+
+
 
