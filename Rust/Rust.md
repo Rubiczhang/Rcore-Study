@@ -307,7 +307,7 @@ struct Rectangle {	//定义语法
     height: u32,
 }
 
-impl Rectangle {	//函数定义语法
+impl Rectangle {	//方法定义语法
     fn area(&self) -> u32 {
         self.width * self.height
     }
@@ -323,7 +323,7 @@ fn main() {
 }
 
 //******************元组结构体*************************
-//每个
+//每个位置的类型都一样
 struct Color(i32, i32, i32);
 
 let black = Color(0, 0, 0)
