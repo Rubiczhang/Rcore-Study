@@ -4,7 +4,7 @@
 
 
 struct ColorClassicStruct {
-    name: &str,
+    name: String,
     hex: String,
 }
 
@@ -24,7 +24,6 @@ mod tests {
 
         assert_eq!(green.name, "green");
         assert_eq!(green.hex, "#00FF00");
-        green.assert_eq
     }
 
     #[test]
