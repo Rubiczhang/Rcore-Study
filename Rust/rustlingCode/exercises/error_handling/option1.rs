@@ -9,7 +9,8 @@
 pub fn pop_too_much() -> bool {
     let mut list = vec![3];
 
-    let last = list.pop().unwrap();
+    let last = list.pop()?;
+    last = last.unwrap();
     println!("The last item in the list is {:?}", last);
 
     let second_to_last = list.pop().unwrap();
