@@ -362,6 +362,7 @@ enum IpAddrKind {
     V6,
 }
 
+
 let four = IpAddrKind::V4;
 let six = IpAddrKind::V6;
 
@@ -760,6 +761,42 @@ impl Summary for Tweet {
     fn summarize(&self) -> String {
         format!("{}: {}", self.username, self.content)
     }
+}
+```
+
+#### trait的动态分发和静态分发
+
+```rust
+#[derive(Debug)]
+struct Foo;
+trait Bar{
+    fn baz(&self);
+}
+impl Bar for Foo{
+    fn baz(&self){ println!("{:?}", self)}
+}
+
+fn static_dispatch<T>(t: &T) where T:Bar{   //静态分发 &后面跟的是一种具体类型，而不是trait
+    t.baz();
+}
+
+fn dynamic_dispatch(t: &Bar){               //动态分发 &后面跟的是一种trait
+    t.baz();
+}
+
+fn main(){
+    let foo = Foo;
+    static_dispatch(&foo);  //rust调用这个函数的时候并没有调用第10行的代码
+                            //而是调用了下面这个单态化函数（实际实现的时候函数名可能有所出入）Rust编程之道 P61
+                            //fn static_dispatch_Foo(t:Foo){
+                            //   Foo.baz(t); 
+                            //}
+                            //该函数是rust编译器在编译时额外添加的
+
+
+    dynamic_dispatch(&foo); //rust编译器并没有为动态分发的函数添加每种可能情况的代码
+                            //而是将参数以TraitObject的形式传入到函数中（rust编程之道P72）
+                            //并且从TraitObejtc指向的相应位置来调用其中的函数(Foo.baz(t))
 }
 ```
 
