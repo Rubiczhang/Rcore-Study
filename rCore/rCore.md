@@ -126,3 +126,141 @@
    	1.  .bss字段是存放初始值为0的值的内存空间。并且这里实现的是**内核堆**，它仅仅需要一块空间来存放。我认为，如果用户进程需要堆的话，可能会对其单独分配一块空间作为堆。
  	2.  经过验证，这个trait在`StackedAllocator` 中具体实现，其时间复杂度为O(1)  （执行了一次 `vec.push()`  其空间复杂度为O(n)
  	3.  代码题见lab2/src(线段树)
+
+## lab3
+
+### 	修改内核：
+
+​			boot_page_table标签后面存的其实是一堆VPN3的页表项，一个代表1GB的内存空间
+
+​			所以第三个表示的是2G-3G的虚拟内存空间，也就是0x8000_0000
+
+### 	题目：
+
+#### 		1. 
+
+​		**a.** boot_page_table标签后面存的其实是一堆VPN3的页表项，一个代表1GB的内存空间
+
+```asm
+_start:
+    # 通过线性映射关系计算 boot_page_table 的物理页号
+    # 在linker.ld里把整个文件放到了0xffffffff80200000开始的虚拟地址中
+    # 同时这里也是入口地址（_start）
+    # open SBI把这段代码放到了0x80200000这个物理地址上
+    lui t0, %hi(boot_page_table)
+    li t1, 0xffffffff00000000
+    sub t0, t0, t1
+    srli t0, t0, 12 #右移
+    # 8 << 60 是 satp 中使用 Sv39 模式的记号
+    li t1, (8 << 60)
+    or t0, t0, t1
+    # 写入 satp 并更新 TLB
+    csrw satp, t0
+    sfence.vma
+```
+
+​		**b.** 跳到rust_main时，把该函数的虚拟地址赋值给了PC，通过第510项页表入口，读取到其物理页号（因为该项是一个叶节点，所以获取物理页号之后直接跟后面三十位地址拼成物理地址）
+
+#### 	2. 
+
+​		`page_tables`里面存的是已经分配了的页表的信息，`page_tables[i]`里面放的是第i个分配的帧的基址（这个帧里存的是页表）
+
+​		`mapped_pairs`存的是
+
+#### 	3.
+
+​		不需要访问B
+
+​		可以通过引用来访问B，参考下图中第六到第八行注释
+
+#### 	4. 提问：rcore是如何设置页表的？
+
+​		`Mapping::new()`这个函数返回的是物理地址的信息
+
+```rust
+/// 找到给定虚拟页号的三级页表项
+///
+/// 如果找不到对应的页表项，则会相应创建页表
+pub fn find_entry(&mut self, vpn: VirtualPageNumber) -> MemoryResult<&mut PageTableEntry> {
+    // 从根页表开始向下查询
+    // 这里不用 self.page_tables[0] 避免后面产生 borrow-check 冲突（我太菜了）
+    let root_table: &mut PageTable = PhysicalAddress::from(self.root_ppn).deref_kernel();
+    let mut entry = &mut root_table.entries[vpn.levels()[0]];
+    //vpn.levels()[0]  vpn的第一级页号
+    //root_table.entries：一个4KB的数组，用虚拟地址索引
+    //这个时候entry用引用来访问vpn的第一级页表
+    for vpn_slice in &vpn.levels()[1..] {
+        if entry.is_empty() {
+            // 如果页表不存在，则需要分配一个新的页表
+            let new_table = PageTableTracker::new(FRAME_ALLOCATOR.lock().alloc()?);
+            let new_ppn = new_table.page_number();
+            // 将新页表的页号写入当前的页表项
+            *entry = PageTableEntry::new(Some(new_ppn), Flags::VALID);
+            // 保存页表
+            self.page_tables.push(new_table);
+        }
+        // 进入下一级页表（使用偏移量来访问物理地址）
+        //这里entry还是用引用来访问下一级页表
+        entry = &mut entry.get_next_table().entries[*vpn_slice];
+    }
+    // 此时 entry 位于第三级页表
+    Ok(entry)
+}
+```
+
+#### 代码题：
+
+​	大体框架如下：
+
+```rust
+//由于对rust的语法还不是很熟悉，并且循环队列涉及到循环引用的问题，目前并不太清楚如何解决。时间比较紧，暂时搁置一下。
+pub struct ClockSwapper{
+    list: CircleList<(VirtualPageNumber, FrameTracker, &entry)>
+    quota: usize,
+    //current_node应该是哪种引用类型我还没想明白，等后面的做完重点看一下各种智能指针
+    current_node:  CircleListNode<(VirtualPageNumber, FrameTracker, &entry)>,
+    
+}
+
+impl Swapper for ClockSwapper{
+    fn new(quota: usize) -> Self{
+        //TO-DO
+    }
+    fn full(&self) -> bool {
+        self.queue.len() == self.quota
+    }
+    fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)> {
+        //遍历循环列表，注意+1的作用
+        for i in range(0..quota+1){
+            //1<<6是entry的访问位
+            if self.current_node.3 & (1<<6) != 0{
+                self.current_node.3 -= (1<<6);
+                //TO-DO:
+                //CircleListNode::next
+                self.current_node = self.current_node.next();
+            }
+            else{
+                //TO-DO:
+                //CircleList::remove()
+                let pre_node = self.current_node;
+                self.current_node = self.current_node.next;
+                self.list.remove(self.pre_node)
+            }
+        }
+    }
+    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker, _entry: *mut PageTableEntry) {
+        //TO-DO:
+        //CircleListNode::push_back()
+        self.current_node.push_back((vpn, frame, PageTableEntry));
+    }
+    fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool) {
+        //TO-DO: 
+        //CircleList::retain()
+        self.queue.retain(|(vpn, _)| predicate(vpn));
+    }
+}
+
+
+
+```
+
