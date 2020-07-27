@@ -213,38 +213,37 @@ pub fn find_entry(&mut self, vpn: VirtualPageNumber) -> MemoryResult<&mut PageTa
 ​	大体框架如下：
 
 ```rust
-//由于对rust的语法还不是很熟悉，并且循环队列涉及到循环引用的问题，目前并不太清楚如何解决。时间比较紧，暂时搁置一下。
 pub struct ClockSwapper{
-    list: CircleList<(VirtualPageNumber, FrameTracker, &entry)>
+    queue: Vec<(VirtualPageNumber, FrameTracker, &mut entry)>
     quota: usize,
-    //current_node应该是哪种引用类型我还没想明白，等后面的做完重点看一下各种智能指针
-    current_node:  CircleListNode<(VirtualPageNumber, FrameTracker, &entry)>,
-    
+    current_node:  usize,
 }
 
 impl Swapper for ClockSwapper{
     fn new(quota: usize) -> Self{
-        //TO-DO
+        Self{
+            queue: Vec<(VirtualPageNumber, FrameTracker, &mut entry)>::new(),
+            quota,
+            current_node: 0,
+        }
     }
     fn full(&self) -> bool {
-        self.queue.len() == self.quota
+        self.vec.len() == self.quota
     }
     fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)> {
         //遍历循环列表，注意+1的作用
-        for i in range(0..quota+1){
+        for i in range(0..self.queue.len()+1){
             //1<<6是entry的访问位
-            if self.current_node.3 & (1<<6) != 0{
-                self.current_node.3 -= (1<<6);
-                //TO-DO:
-                //CircleListNode::next
-                self.current_node = self.current_node.next();
+            self.current_node += 1;
+            let cn = self.current_node % self.quota;
+            if self.queue[cn].3 & (1<<6) != 0{
+                self.queue[cn].3 -= (1<<6);
             }
             else{
-                //TO-DO:
-                //CircleList::remove()
-                let pre_node = self.current_node;
-                self.current_node = self.current_node.next;
-                self.list.remove(self.pre_node)
+                //找到合适的页面，其实并没有在vec里pop出去
+                //而是返回这个页的信息 把它写到硬盘里去
+                V
+                break;
             }
         }
     }
@@ -258,8 +257,6 @@ impl Swapper for ClockSwapper{
         //CircleList::retain()
         self.queue.retain(|(vpn, _)| predicate(vpn));
     }
-}
-
 
 
 ```
