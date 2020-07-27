@@ -210,54 +210,75 @@ pub fn find_entry(&mut self, vpn: VirtualPageNumber) -> MemoryResult<&mut PageTa
 
 #### 代码题：
 
-​	大体框架如下：
+​	见swapper.rs
 
-```rust
-pub struct ClockSwapper{
-    queue: Vec<(VirtualPageNumber, FrameTracker, &mut entry)>
-    quota: usize,
-    current_node:  usize,
-}
+![实现结果](Pic/lab3-res.png)
 
-impl Swapper for ClockSwapper{
-    fn new(quota: usize) -> Self{
-        Self{
-            queue: Vec<(VirtualPageNumber, FrameTracker, &mut entry)>::new(),
-            quota,
-            current_node: 0,
-        }
-    }
-    fn full(&self) -> bool {
-        self.vec.len() == self.quota
-    }
-    fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)> {
-        //遍历循环列表，注意+1的作用
-        for i in range(0..self.queue.len()+1){
-            //1<<6是entry的访问位
-            self.current_node += 1;
-            let cn = self.current_node % self.quota;
-            if self.queue[cn].3 & (1<<6) != 0{
-                self.queue[cn].3 -= (1<<6);
-            }
-            else{
-                //找到合适的页面，其实并没有在vec里pop出去
-                //而是返回这个页的信息 把它写到硬盘里去
-                V
-                break;
-            }
-        }
-    }
-    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker, _entry: *mut PageTableEntry) {
-        //TO-DO:
-        //CircleListNode::push_back()
-        self.current_node.push_back((vpn, frame, PageTableEntry));
-    }
-    fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool) {
-        //TO-DO: 
-        //CircleList::retain()
-        self.queue.retain(|(vpn, _)| predicate(vpn));
-    }
+## lab4-1
 
+### 	1.原理：
 
-```
+​		**线程切换之中，页表是何时切换的？页表的切换会不会影响程序 / 操作系统的运行？为什么？**
 
+​		线程切换是在Thread::prepare中进行的，
+
+​			通过调用内核栈的push_context 将context放到栈顶
+
+​			然后prepare返回，这个时候PC就从context中读取返回地址。
+
+​	页表是在thread::prepare中进行切换的，这个时候并不会影响程序运行，因为内核空间在任何线程中都是相同的
+
+### 	2.设计
+
+​		**如果不使用 `sscratch` 提供内核栈，而是像原来一样，遇到中断就直接将上下文压栈，请举出（思路即可，无需代码）**	
+
+​		如果内核跟用户进程用一个栈，那么意味着他们可以共同访问这一块地址空间。那整个异常处理的逻辑都要重写，下面几种情况都是可能发生的。具体发生原因视实现方案不同。
+
+- ​	   一种情况不会出现问题
+
+  ​		普通的函数调用是可以的
+
+  - 一种情况导致异常无法处理（指无法进入 `handle_interrupt`）
+  - 一种情况导致产生嵌套异常（指第二个异常能够进行到调用 `handle_interrupt`，不考虑后续执行情况）
+  - 一种情况导致一个用户进程（先不考虑是怎么来的）可以将自己变为内核进程，或以内核态执行自己的代码
+  
+
+### 3.代码题
+
+#### 	1.1
+
+​		我在main函数里面加了一个死循环，所以可以有充分的时间用来调用中断
+
+​		结果如下，实现见interrupt/handler.rs
+
+​		![](Pic/lab4-1-1.png)
+
+#### 1.2
+
+​	结果如下，实现见handler、thread
+
+​	![lab4-1-2](D:\rcore\upversion\Rcore-Study\rCore\Pic\lab4-1-2.png)
+
+## lab4-2
+
+​	这一个我本来想用rust自带的binaryheap实现的，结果快写完了才发现binaryheap只能对堆顶进行操作。不能实现remove，可惜。由于赶ddl 就先用linkedlist实现吧
+
+​	rust不用允许整数计算溢出，这里写的stride有一个潜在的bug，等有时间再修改。实验截图如下，**如果不加painc！可以持续运行一段时间**  时间比较仓促，暂时先完成这样。
+
+![lab4-2](D:\rcore\upversion\Rcore-Study\rCore\Pic\lab4-2.png)
+
+ **分析：**
+
+- 在 Stride Scheduling 算法下，如果一个线程进入了一段时间的等待（例如等待输入，此时它不会被运行），会发生什么？
+
+     因为他的pass比较小，所以会继续运行而没人抢占
+
+- 对于两个优先级分别为 9 和 1 的线程，连续 10 个时间片中，前者的运行次数一定更多吗？
+
+    不一定，优先级为9的线程可能先运行完毕
+
+- 你认为 Stride Scheduling 算法有什么不合理之处？可以怎样改进？
+
+  ​	1. 我自己写的并不能对溢出的情况进行处理。后期完善的时候可以增加一个模运算。
+
+  ​	2. 我的实现中，如果加进来一个新的线程，它的pass是0，所以会连续执行一段时间。可以把初始的步数设成当前队列中“无符号的有符号语义下的比较”最小的那个pass
